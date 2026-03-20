@@ -16,13 +16,8 @@ model = joblib.load("catboost_model.pkl")
 template = joblib.load("template.pkl")
 feature_names = template.columns
 
-# 原始数据（用于变量判断）
-file_path = r"F:\机器学学射血分数保留\数据处理\mimic_5.xlsx"
-df = pd.read_excel(file_path)
-target = "death_within_icu_28days"
-X_full = df.drop(columns=[target])
-
-numeric_features = X_full.select_dtypes(include=['int64','float64']).columns
+# ⭐ 用template代替Excel（关键修复）
+numeric_features = template.select_dtypes(include=['int64','float64']).columns
 
 # ======================
 # 标题
@@ -56,14 +51,18 @@ with col1:
     for i, col in enumerate(feature_names):
         with cols[i % 3]:
 
-            # ⭐ 改成 Yes / No（重点）
+            # ⭐ 正确的二分类变量名称
             if col in ["Diuretic use", "Inotrope use", "Vasopressor use"]:
-                val = st.selectbox(col, ["No", "Yes"])
+                
+                # 显示名称优化
+                display_name = col.replace("Loop ", "")
+                
+                val = st.selectbox(display_name, ["No", "Yes"])
                 input_data[col] = 1 if val == "Yes" else 0
 
+            # ⭐ 数值变量（用0或中位数，不能用X_full）
             elif col in numeric_features:
-                val = float(X_full[col].mean())
-                input_data[col] = st.number_input(col, value=val)
+                input_data[col] = st.number_input(col, value=0.0)
 
             else:
                 input_data[col] = st.number_input(col, value=0.0)
@@ -82,9 +81,7 @@ with col2:
         # ===== 预测 =====
         prob = model.predict_proba(input_df)[0][1]
 
-        # ======================
-        # SHAP
-        # ======================
+        # ===== SHAP =====
         explainer = shap.TreeExplainer(model)
         shap_values = explainer.shap_values(input_df)
 
@@ -92,7 +89,7 @@ with col2:
             shap_values = shap_values[1]
 
         # ======================
-        # ⭐ Force Plot（彻底修复版）
+        # Force Plot
         # ======================
         st.subheader("Force Plot")
 
@@ -103,7 +100,6 @@ with col2:
         )
 
         shap_html = f"<head>{shap.getjs()}</head><body>{force_plot.html()}</body>"
-
         st.components.v1.html(shap_html, height=250)
 
         # ======================
