@@ -27,7 +27,7 @@ unit_map = {
     "SAPSII": "(score)",
     "PLT": "(K/μL)",
     "RDW": "(%)",
-    "RBC": "(×10^6/μL)",
+    "RBC": "(m/uL)",
     "WBC": "(K/μL)",
     "Glu": "(mg/dL)",
     "K+": "(mmol/L)",
