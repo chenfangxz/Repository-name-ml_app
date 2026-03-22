@@ -3,103 +3,130 @@ import pandas as pd
 from catboost import CatBoostClassifier
 import shap
 import matplotlib.pyplot as plt
+import qrcode
+from io import BytesIO
 
-# ===== 页面设置 =====
+# ======================
+# 页面设置
+# ======================
 st.set_page_config(layout="wide")
-st.title("Prediction of short-term mortality in ACS patients with heart failure")
 
-# ===== 加载模型 =====
+# ======================
+# 加载模型（改这里🔥）
+# ======================
 model = CatBoostClassifier()
 model.load_model("catboost_model.cbm")
 
-explainer = shap.Explainer(model)
+# ⭐ 特征顺序（必须和训练一致）
+feature_names = [
+    "Age(years)","Pco2(mmHg)","Po2(mmHg)","PH","Na+(mmol/L)",
+    "CL-(mmol/L)","Mg2+(mg/dL)","AG(mEq/L)","RBC(m/uL)","WBC(K/uL)",
+    "PLT(K/uL)","RDW(%)","Glu(mg/dL)","BUN(mg/dL)",
+    "Creatinine(mg/dL)","ALT(IU/L)","SOFA","SAPSII",
+    "Diuretic use","Inotrope use","Vasopressor use"
+]
 
-# ===== 布局 =====
-left, right = st.columns([1, 2])
+# ======================
+# 二维码
+# ======================
+url = "https://your-app.streamlit.app"
 
-# ================= 左侧输入 =================
-with left:
+qr = qrcode.make(url)
+buf = BytesIO()
+qr.save(buf, format="PNG")
+qr_img = buf.getvalue()
+
+# ======================
+# 标题
+# ======================
+col_title, col_qr = st.columns([5,1])
+
+with col_title:
+    st.markdown("""
+    <h3 style='background-color:#1f77b4;color:white;padding:10px;border-radius:5px;'>
+    Prediction of short-term mortality in patients with ACS complicated by heart failure
+    </h3>
+    """, unsafe_allow_html=True)
+
+with col_qr:
+    st.image(qr_img, width=120)
+
+st.info("""
+a. Based on MIMIC-IV database  
+b. Machine learning (CatBoost)  
+c. Input data within 24h of ICU admission  
+""")
+
+# ======================
+# 布局
+# ======================
+col1, col2 = st.columns([1,2])
+
+# ======================
+# 输入区
+# ======================
+with col1:
+
     st.subheader("Input Parameters")
 
-    age = st.number_input("Age(years)", 0.0, 120.0, 60.0)
-    pco2 = st.number_input("Pco2(mmHg)", 0.0, 100.0, 40.0)
-    po2 = st.number_input("Po2(mmHg)", 0.0, 200.0, 80.0)
-    ph = st.number_input("PH", 6.5, 8.0, 7.4)
-    na = st.number_input("Na+(mmol/L)", 100.0, 180.0, 140.0)
-    cl = st.number_input("CL-(mmol/L)", 70.0, 140.0, 100.0)
-    mg = st.number_input("Mg2+(mg/dL)", 0.5, 5.0, 2.0)
+    cols = st.columns(3)
 
-    ag = st.number_input("AG(mEq/L)", 0.0, 40.0, 12.0)
-    rbc = st.number_input("RBC(m/uL)", 0.0, 10.0, 4.5)
-    wbc = st.number_input("WBC(K/uL)", 0.0, 50.0, 8.0)
-    plt_ = st.number_input("PLT(K/uL)", 0.0, 1000.0, 200.0)
-    rdw = st.number_input("RDW(%)", 0.0, 30.0, 13.0)
-    glu = st.number_input("Glu(mg/dL)", 0.0, 500.0, 100.0)
-    bun = st.number_input("BUN(mg/dL)", 0.0, 200.0, 20.0)
+    # ⭐ 输入（简化但完整）
+    inputs = {}
 
-    creatinine = st.number_input("Creatinine(mg/dL)", 0.0, 10.0, 1.0)
-    alt = st.number_input("ALT(IU/L)", 0.0, 1000.0, 30.0)
-    sofa = st.number_input("SOFA", 0.0, 30.0, 5.0)
-    sapsii = st.number_input("SAPSII", 0.0, 100.0, 30.0)
+    for i, col in enumerate(feature_names):
+        with cols[i % 3]:
 
-    # ===== 关键修复（Yes/No → 0/1）=====
-    diuretic = st.selectbox("Diuretic use", ["No", "Yes"])
-    diuretic = 1 if diuretic == "Yes" else 0
+            if col in ["Diuretic use","Inotrope use","Vasopressor use"]:
+                val = st.selectbox(col, ["No","Yes"])
+                inputs[col] = 1 if val == "Yes" else 0
+            else:
+                inputs[col] = st.number_input(col, value=0.0)
 
-    inotrope = st.selectbox("Inotrope use", ["No", "Yes"])
-    inotrope = 1 if inotrope == "Yes" else 0
+    predict_btn = st.button("Calculate", use_container_width=True)
 
-    vasopressor = st.selectbox("Vasopressor use", ["No", "Yes"])
-    vasopressor = 1 if vasopressor == "Yes" else 0
+# ======================
+# 结果区
+# ======================
+with col2:
 
-    run = st.button("Calculate")
+    if predict_btn:
 
-# ================= 右侧结果 =================
-with right:
+        input_df = pd.DataFrame([inputs])
 
-    if run:
+        # ⭐ 保证顺序一致（关键🔥）
+        input_df = input_df[feature_names]
 
-        input_data = pd.DataFrame([{
-            "Age(years)": age,
-            "Pco2(mmHg)": pco2,
-            "Po2(mmHg)": po2,
-            "PH": ph,
-            "Na+(mmol/L)": na,
-            "CL-(mmol/L)": cl,
-            "Mg2+(mg/dL)": mg,
-            "AG(mEq/L)": ag,
-            "RBC(m/uL)": rbc,
-            "WBC(K/uL)": wbc,
-            "PLT(K/uL)": plt_,
-            "RDW(%)": rdw,
-            "Glu(mg/dL)": glu,
-            "BUN(mg/dL)": bun,
-            "Creatinine(mg/dL)": creatinine,
-            "ALT(IU/L)": alt,
-            "SOFA": sofa,
-            "SAPSII": sapsii,
-            "Diuretic use": diuretic,
-            "Inotrope use": inotrope,
-            "Vasopressor use": vasopressor
-        }])
+        # ======================
+        # 预测
+        # ======================
+        prob = model.predict_proba(input_df)[0][1]
 
-        # ===== 预测 =====
-        risk = model.predict_proba(input_data)[0][1]
         st.subheader("Prediction Results")
-        st.error(f"Predicted risk of death: {risk:.2%}")
+        st.error(f"Predicted risk of death: {prob:.2%}")
 
-        # ===== SHAP =====
-        shap_values = explainer(input_data)
+        # ======================
+        # SHAP（稳定写法🔥）
+        # ======================
+        explainer = shap.Explainer(model)
+        shap_values = explainer(input_df)
 
-        # ===== Force Plot =====
+        # ======================
+        # Force Plot
+        # ======================
         st.subheader("Force Plot")
+
         force_html = shap.getjs() + shap.plots.force(
             shap_values[0], matplotlib=False
         ).html()
-        st.components.v1.html(force_html, height=150)
 
-        # ===== Waterfall =====
+        st.components.v1.html(force_html, height=200)
+
+        # ======================
+        # Waterfall Plot
+        # ======================
         st.subheader("Waterfall Plot")
+
         fig = plt.figure()
         shap.plots.waterfall(shap_values[0], show=False)
         st.pyplot(fig)
