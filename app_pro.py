@@ -17,35 +17,48 @@ st.set_page_config(layout="wide")
 model = joblib.load("catboost_model.pkl")
 template = joblib.load("template.pkl")
 
-# ⭐ 手动固定变量（与你模型一致！！）
+# ======================
+# ⭐ 固定变量顺序（已优化UI）
+# ======================
 feature_names = [
+    # 🟦 用药
     "Diuretic use",
-    "ALT (IU/L)",
-    "Mg2+ (mg/dL)",
-    "RDW (%)",
+    "Inotrope use",
+    "Vasopressor use",
+
+    # 🟩 评分
+    "SOFA",
+    "SAPS II",
+
+    # 🟨 血常规
     "WBC (K/uL)",
-    "Glu (mg/dL)",
     "RBC (m/uL)",
     "PLT (K/uL)",
-    "Inotrope use",
-    "Po2 (mmHg)",
-    "Vasopressor use",
+    "RDW (%)",
+
+    # 🟨 生化
+    "Glu (mg/dL)",
     "BUN (mg/dL)",
-    "SAPS II",
     "Creatinine (mg/dL)",
-    "SOFA",
-    "Anion Gap (mEq/L)",
-    "Pco2 (mmHg)",
-    "pH",
+    "ALT (IU/L)",
+
+    # 🟨 电解质
     "Na+ (mEq/L)",
-    "Cl- (mEq/L)"
+    "Cl- (mEq/L)",
+    "Mg2+ (mg/dL)",
+    "Anion Gap (mEq/L)",
+
+    # 🟨 血气
+    "pH",
+    "Pco2 (mmHg)",
+    "Po2 (mmHg)"
 ]
 
-# ⭐ 默认值（仍然用template）
+# 默认值
 default_values = template.median(numeric_only=True)
 
 # ======================
-# 单位（已全部修正）
+# 单位
 # ======================
 unit_map = {
     "SOFA": "(score)",
@@ -118,7 +131,7 @@ with col1:
 
             display_name = col + " " + unit_map.get(col, "")
 
-            # ⭐ 二分类变量（已修复）
+            # ⭐ 二分类变量
             if col in ["Diuretic use", "Inotrope use", "Vasopressor use"]:
                 val = st.selectbox(col, ["No", "Yes"])
                 input_data[col] = 1 if val == "Yes" else 0
@@ -138,7 +151,7 @@ with col2:
 
         input_df = pd.DataFrame([input_data])
 
-        # ⭐ 强制顺序一致（关键）
+        # ⭐ 强制顺序一致
         input_df = input_df[feature_names]
 
         # ======================
