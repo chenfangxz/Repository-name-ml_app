@@ -3,23 +3,26 @@ import pandas as pd
 from catboost import CatBoostClassifier
 import shap
 import matplotlib.pyplot as plt
-import qrcode
-from io import BytesIO
 
 # ======================
-# 页面设置
+# 页面
 # ======================
 st.set_page_config(layout="wide")
+st.title("Mortality Risk Calculator")
 
 # ======================
-# 加载模型（改这里🔥）
+# 加载模型
 # ======================
 model = CatBoostClassifier()
 model.load_model("catboost_model.cbm")
 
-# ⭐ 特征顺序（必须和训练一致）
+explainer = shap.Explainer(model)
+
+# ======================
+# 特征顺序（必须一致🔥）
+# ======================
 feature_names = [
-    "Age(years)","Pco2(mmHg)","Po2(mmHg)","PH","Na+(mmol/L)",
+    "Pco2(mmHg)","Po2(mmHg)","PH","Na+(mmol/L)",
     "CL-(mmol/L)","Mg2+(mg/dL)","AG(mEq/L)","RBC(m/uL)","WBC(K/uL)",
     "PLT(K/uL)","RDW(%)","Glu(mg/dL)","BUN(mg/dL)",
     "Creatinine(mg/dL)","ALT(IU/L)","SOFA","SAPSII",
@@ -27,93 +30,62 @@ feature_names = [
 ]
 
 # ======================
-# 二维码
-# ======================
-url = "https://your-app.streamlit.app"
-
-qr = qrcode.make(url)
-buf = BytesIO()
-qr.save(buf, format="PNG")
-qr_img = buf.getvalue()
-
-# ======================
-# 标题
-# ======================
-col_title, col_qr = st.columns([5,1])
-
-with col_title:
-    st.markdown("""
-    <h3 style='background-color:#1f77b4;color:white;padding:10px;border-radius:5px;'>
-    Prediction of short-term mortality in patients with ACS complicated by heart failure
-    </h3>
-    """, unsafe_allow_html=True)
-
-with col_qr:
-    st.image(qr_img, width=120)
-
-st.info("""
-a. Based on MIMIC-IV database  
-b. Machine learning (CatBoost)  
-c. Input data within 24h of ICU admission  
-""")
-
-# ======================
 # 布局
 # ======================
-col1, col2 = st.columns([1,2])
+left, right = st.columns([1,2])
 
 # ======================
-# 输入区
+# 输入
 # ======================
-with col1:
+with left:
 
-    st.subheader("Input Parameters")
+    st.subheader("Input")
 
-    cols = st.columns(3)
-
-    # ⭐ 输入（简化但完整）
     inputs = {}
 
-    for i, col in enumerate(feature_names):
-        with cols[i % 3]:
+    for col in feature_names:
 
-            if col in ["Diuretic use","Inotrope use","Vasopressor use"]:
-                val = st.selectbox(col, ["No","Yes"])
-                inputs[col] = 1 if val == "Yes" else 0
-            else:
-                inputs[col] = st.number_input(col, value=0.0)
+        # ⭐ 关键修复：三分类变量
+        if col in ["Diuretic use","Inotrope use","Vasopressor use"]:
+            val = st.selectbox(col, ["No","Yes"], key=col)
+            inputs[col] = 1 if val == "Yes" else 0   # ← 强制转数字
 
-    predict_btn = st.button("Calculate", use_container_width=True)
+        else:
+            inputs[col] = st.number_input(col, value=0.0, key=col)
+
+    run = st.button("Calculate")
 
 # ======================
-# 结果区
+# 输出
 # ======================
-with col2:
+with right:
 
-    if predict_btn:
+    if run:
 
+        # 转DataFrame
         input_df = pd.DataFrame([inputs])
 
-        # ⭐ 保证顺序一致（关键🔥）
+        # ⭐ 强制所有列为float（关键修复🔥）
+        for c in input_df.columns:
+            input_df[c] = pd.to_numeric(input_df[c])
+
+        # 保证顺序
         input_df = input_df[feature_names]
 
         # ======================
         # 预测
         # ======================
-        prob = model.predict_proba(input_df)[0][1]
+        risk = model.predict_proba(input_df)[0][1]
 
-        st.subheader("Prediction Results")
-        st.error(f"Predicted risk of death: {prob:.2%}")
+        st.subheader("Prediction")
+        st.error(f"Risk of death: {risk:.2%}")
 
         # ======================
-        # SHAP（稳定写法🔥）
+        # SHAP
         # ======================
-        explainer = shap.Explainer(model)
         shap_values = explainer(input_df)
 
-        # ======================
-        # Force Plot
-        # ======================
+        # ===== Force Plot =====
         st.subheader("Force Plot")
 
         force_html = shap.getjs() + shap.plots.force(
@@ -122,9 +94,7 @@ with col2:
 
         st.components.v1.html(force_html, height=200)
 
-        # ======================
-        # Waterfall Plot
-        # ======================
+        # ===== Waterfall =====
         st.subheader("Waterfall Plot")
 
         fig = plt.figure()
