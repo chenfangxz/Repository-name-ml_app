@@ -18,43 +18,50 @@ model = joblib.load("catboost_model.pkl")
 template = joblib.load("template.pkl")
 
 # ======================
-# ⭐ 固定变量顺序（已优化UI）
+# ✅ 模型顺序（绝对不能改！！）
 # ======================
-feature_names = [
-    # 🟦 用药
+feature_names_model = template.columns.tolist()
+
+# ======================
+# ✅ UI顺序（随便排）
+# ======================
+feature_names_ui = [
+    # 用药
     "Diuretic use",
     "Inotrope use",
     "Vasopressor use",
 
-    # 🟩 评分
+    # 评分
     "SOFA",
-    "SAPS II",
+    "SAPSII",
 
-    # 🟨 血常规
-    "WBC (K/uL)",
-    "RBC (m/uL)",
-    "PLT (K/uL)",
-    "RDW (%)",
+    # 血常规
+    "WBC",
+    "RBC",
+    "PLT",
+    "RDW",
 
-    # 🟨 生化
-    "Glu (mg/dL)",
-    "BUN (mg/dL)",
-    "Creatinine (mg/dL)",
-    "ALT (IU/L)",
+    # 生化
+    "Glu",
+    "BUN",
+    "Creatinine",
+    "ALT",
 
-    # 🟨 电解质
-    "Na+ (mEq/L)",
-    "Cl- (mEq/L)",
-    "Mg2+ (mg/dL)",
-    "Anion Gap (mEq/L)",
+    # 电解质
+    "Na",
+    "Cl",
+    "Mg",
+    "AG",
 
-    # 🟨 血气
-    "pH",
-    "Pco2 (mmHg)",
-    "Po2 (mmHg)"
+    # 血气
+    "PH",
+    "Pco2",
+    "Po2"
 ]
 
+# ======================
 # 默认值
+# ======================
 default_values = template.median(numeric_only=True)
 
 # ======================
@@ -62,19 +69,19 @@ default_values = template.median(numeric_only=True)
 # ======================
 unit_map = {
     "SOFA": "(score)",
-    "SAPS II": "(score)",
+    "SAPSII": "(score)",
     "PLT": "(K/uL)",
     "RDW": "(%)",
     "RBC": "(m/uL)",
     "WBC": "(K/uL)",
     "Glu": "(mg/dL)",
-    "Na+": "(mEq/L)",
-    "Anion Gap": "(mEq/L)",
-    "Cl- ": "(mEq/L)",
-    "Mg2+": "(mg/dL)",
+    "Na": "(mEq/L)",
+    "AG": "(mEq/L)",
+    "Cl": "(mEq/L)",
+    "Mg": "(mg/dL)",
     "Pco2": "(mmHg)",
     "Po2": "(mmHg)",
-    "pH": "",
+    "PH": "",
     "ALT": "(IU/L)",
     "BUN": "(mg/dL)",
     "Creatinine": "(mg/dL)"
@@ -126,16 +133,15 @@ with col1:
     input_data = {}
     cols = st.columns(3)
 
-    for i, col in enumerate(feature_names):
+    for i, col in enumerate(feature_names_ui):
         with cols[i % 3]:
 
             display_name = col + " " + unit_map.get(col, "")
 
-            # ⭐ 二分类变量
+            # 二分类变量
             if col in ["Diuretic use", "Inotrope use", "Vasopressor use"]:
                 val = st.selectbox(col, ["No", "Yes"])
                 input_data[col] = 1 if val == "Yes" else 0
-
             else:
                 default_val = float(default_values.get(col, 0))
                 input_data[col] = st.number_input(display_name, value=default_val)
@@ -151,8 +157,8 @@ with col2:
 
         input_df = pd.DataFrame([input_data])
 
-        # ⭐ 强制顺序一致
-        input_df = input_df[feature_names]
+        # ✅ 核心：按模型顺序重排
+        input_df = input_df[feature_names_model]
 
         # ======================
         # 预测
@@ -191,7 +197,7 @@ with col2:
         shap.plots._waterfall.waterfall_legacy(
             explainer.expected_value,
             shap_values[0],
-            feature_names=feature_names
+            feature_names=feature_names_model
         )
         st.pyplot(fig)
 
