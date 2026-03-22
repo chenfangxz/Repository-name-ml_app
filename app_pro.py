@@ -66,7 +66,7 @@ unit_map = {
     "PLT": "(K/uL)",
     "RDW": "(%)",
     "RBC": "(m/uL)",
-    "WBC (K/uL)": "(K/uL)",
+    "WBC": "(K/uL)",
     "Glu": "(mg/dL)",
     "Na+": "(mEq/L)",
     "Anion Gap": "(mEq/L)",
