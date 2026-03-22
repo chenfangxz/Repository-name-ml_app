@@ -63,21 +63,21 @@ default_values = template.median(numeric_only=True)
 unit_map = {
     "SOFA": "(score)",
     "SAPS II": "(score)",
-    "PLT (K/uL)": "(K/uL)",
-    "RDW (%)": "(%)",
-    "RBC (m/uL)": "(m/uL)",
+    "PLT": "(K/uL)",
+    "RDW": "(%)",
+    "RBC": "(m/uL)",
     "WBC (K/uL)": "(K/uL)",
-    "Glu (mg/dL)": "(mg/dL)",
-    "Na+ (mEq/L)": "(mEq/L)",
-    "Anion Gap (mEq/L)": "(mEq/L)",
-    "Cl- (mEq/L)": "(mEq/L)",
-    "Mg2+ (mg/dL)": "(mg/dL)",
-    "Pco2 (mmHg)": "(mmHg)",
-    "Po2 (mmHg)": "(mmHg)",
+    "Glu": "(mg/dL)",
+    "Na+": "(mEq/L)",
+    "Anion Gap": "(mEq/L)",
+    "Cl- ": "(mEq/L)",
+    "Mg2+": "(mg/dL)",
+    "Pco2": "(mmHg)",
+    "Po2": "(mmHg)",
     "pH": "",
-    "ALT (IU/L)": "(IU/L)",
-    "BUN (mg/dL)": "(mg/dL)",
-    "Creatinine (mg/dL)": "(mg/dL)"
+    "ALT": "(IU/L)",
+    "BUN": "(mg/dL)",
+    "Creatinine": "(mg/dL)"
 }
 
 # ======================
