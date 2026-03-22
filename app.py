@@ -4,22 +4,20 @@ from catboost import CatBoostClassifier
 import shap
 import matplotlib.pyplot as plt
 
-# ===== 页面配置 =====
+# ===== 页面设置 =====
 st.set_page_config(layout="wide")
-
-st.title("Prediction of short-term mortality in patients with ACS complicated by heart failure")
+st.title("Prediction of short-term mortality in ACS patients with heart failure")
 
 # ===== 加载模型 =====
 model = CatBoostClassifier()
 model.load_model("catboost_model.cbm")
 
 explainer = shap.Explainer(model)
-shap.initjs()
 
-# ===== 左右布局 =====
+# ===== 布局 =====
 left, right = st.columns([1, 2])
 
-# ================= 左侧：输入 =================
+# ================= 左侧输入 =================
 with left:
     st.subheader("Input Parameters")
 
@@ -44,18 +42,23 @@ with left:
     sofa = st.number_input("SOFA", 0.0, 30.0, 5.0)
     sapsii = st.number_input("SAPSII", 0.0, 100.0, 30.0)
 
-    diuretic = st.selectbox("Diuretic use", ["Yes", "No"])
-    inotrope = st.selectbox("Inotrope use", ["Yes", "No"])
-    vasopressor = st.selectbox("Vasopressor use", ["Yes", "No"])
+    # ===== 关键修复（Yes/No → 0/1）=====
+    diuretic = st.selectbox("Diuretic use", ["No", "Yes"])
+    diuretic = 1 if diuretic == "Yes" else 0
+
+    inotrope = st.selectbox("Inotrope use", ["No", "Yes"])
+    inotrope = 1 if inotrope == "Yes" else 0
+
+    vasopressor = st.selectbox("Vasopressor use", ["No", "Yes"])
+    vasopressor = 1 if vasopressor == "Yes" else 0
 
     run = st.button("Calculate")
 
-# ================= 右侧：结果 =================
+# ================= 右侧结果 =================
 with right:
 
     if run:
 
-        # ===== 构造输入 =====
         input_data = pd.DataFrame([{
             "Age(years)": age,
             "Pco2(mmHg)": pco2,
@@ -82,25 +85,21 @@ with right:
 
         # ===== 预测 =====
         risk = model.predict_proba(input_data)[0][1]
-
         st.subheader("Prediction Results")
         st.error(f"Predicted risk of death: {risk:.2%}")
 
-        # ===== SHAP计算 =====
+        # ===== SHAP =====
         shap_values = explainer(input_data)
 
         # ===== Force Plot =====
         st.subheader("Force Plot")
-
         force_html = shap.getjs() + shap.plots.force(
             shap_values[0], matplotlib=False
         ).html()
-
         st.components.v1.html(force_html, height=150)
 
-        # ===== Waterfall Plot =====
+        # ===== Waterfall =====
         st.subheader("Waterfall Plot")
-
         fig = plt.figure()
         shap.plots.waterfall(shap_values[0], show=False)
         st.pyplot(fig)
