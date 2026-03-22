@@ -17,38 +17,70 @@ st.set_page_config(layout="wide")
 model = joblib.load("catboost_model.pkl")
 template = joblib.load("template.pkl")
 
-feature_names = template.columns
-
-# ⭐ 用训练数据中位数作为默认值（关键）
-default_values = template.median(numeric_only=True)
+# ✅ 模型真实变量（绝对不能改）
+feature_names = template.columns.tolist()
 
 # ======================
-# 单位
+# 👉 显示名称（只影响UI）
 # ======================
-unit_map = {
-    "SOFA": "(score)",
-    "SAPSII": "(score)",
-    "PLT": "(K/μL)",
-    "RDW": "(%)",
-    "RBC": "(×10^6/μL)",
-    "WBC": "(K/μL)",
-    "Glu": "(mg/dL)",
-    "Na+": "(mmol/L)",
-    "AG": "(mEq/L)",
-    "CL-": "(mmol/L)",
-    "Mg2+": "(mg/dL)",
-    "Pco2": "(mmHg)",
-    "Po2": "(mmHg)",
-    "PH": "",
-    "ALT": "(IU/L)",
-    "BUN": "(mg/dL)",
-    "Creatinine": "(mg/dL)"
+display_map = {
+    "SOFA": "SOFA (score)",
+    "SAPSII": "SAPS II (score)",
+    "PLT": "PLT (K/uL)",
+    "RDW": "RDW (%)",
+    "RBC": "RBC (m/uL)",
+    "WBC": "WBC (K/uL)",
+    "Glu": "Glucose (mg/dL)",
+    "Na": "Na+ (mEq/L)",
+    "AG": "Anion Gap (mEq/L)",
+    "Cl": "Cl- (mEq/L)",
+    "Mg": "Mg2+ (mg/dL)",
+    "Pco2": "Pco2 (mmHg)",
+    "Po2": "Po2 (mmHg)",
+    "PH": "pH",
+    "ALT": "ALT (IU/L)",
+    "Creatinine": "Creatinine (mg/dL)",
+    "BUN": "BUN (mg/dL)",
+    "Diuretic use": "Diuretic use",
+    "Inotrope use": "Inotrope use",
+    "Vasopressor use": "Vasopressor use"
 }
 
 # ======================
-# ⭐ 二维码
+# 👉 UI顺序（你想怎么排都行）
 # ======================
-url = "https://你的-app-name.streamlit.app"
+feature_names_ui = [
+    "Diuretic use",
+    "Inotrope use",
+    "Vasopressor use",
+    "SOFA",
+    "SAPSII",
+    "WBC",
+    "RBC",
+    "PLT",
+    "RDW",
+    "Glu",
+    "BUN",
+    "Creatinine",
+    "ALT",
+    "Na",
+    "Cl",
+    "Mg",
+    "AG",
+    "PH",
+    "Pco2",
+    "Po2"
+]
+
+# ======================
+# 默认值
+# ======================
+default_values = template.median(numeric_only=True)
+
+# ======================
+# 二维码
+# ======================
+url = "https://repository-name-mlapp-w5nvkm7csffnjihvpuej5q.streamlit.app/"
 
 qr = qrcode.make(url)
 buf = BytesIO()
@@ -91,19 +123,16 @@ with col1:
     input_data = {}
     cols = st.columns(3)
 
-    for i, col in enumerate(feature_names):
+    for i, col in enumerate(feature_names_ui):
         with cols[i % 3]:
 
-            display_name = col + " " + unit_map.get(col, "")
+            display_name = display_map.get(col, col)
 
-            # ⭐ 二分类变量
+            # 二分类变量
             if col in ["Diuretic use", "Inotrope use", "Vasopressor use"]:
-                display_name = col.replace("Loop ", "")
                 val = st.selectbox(display_name, ["No", "Yes"])
                 input_data[col] = 1 if val == "Yes" else 0
-
             else:
-                # ⭐ 用中位数做默认值（关键修复）
                 default_val = float(default_values.get(col, 0))
                 input_data[col] = st.number_input(display_name, value=default_val)
 
@@ -118,7 +147,7 @@ with col2:
 
         input_df = pd.DataFrame([input_data])
 
-        # ⭐⭐⭐ 核心修复（必须）
+        # ✅ 核心：保证和模型完全一致
         input_df = input_df[feature_names]
 
         # ======================
