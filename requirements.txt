@@ -5,3 +5,5 @@ joblib
 shap
 matplotlib
 catboost
+qrcode
+pillow
