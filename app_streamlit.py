@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import joblib
 import shap
 import matplotlib.pyplot as plt
@@ -31,13 +30,25 @@ with col_title:
     """, unsafe_allow_html=True)
 
 with col_qr:
-    app_url = "https://35xyv2x2xg2apgyhqred9v.streamlit.app/"
-    qr = qrcode.make(app_url)
+    # ⚠️ 一定填你真实能打开的网址
+    app_url = "https://repository-name-mlapp-35xyv2x2xg2apgyhqred9v.streamlit.app/"
+
+    qr = qrcode.QRCode(
+        version=1,
+        box_size=10,   # 清晰度关键
+        border=2
+    )
+    qr.add_data(app_url)
+    qr.make(fit=True)
+
+    img = qr.make_image(fill_color="black", back_color="white")
+
     buf = io.BytesIO()
-    qr.save(buf)
+    img.save(buf)
     buf.seek(0)
-    st.image(buf, width=100)
-    st.caption("Scan")
+
+    st.image(buf, width=150)
+    st.caption("Scan to open")
 
 # ======================
 # 说明框
@@ -51,61 +62,52 @@ c. Input patient data within 24h of ICU admission
 """, unsafe_allow_html=True)
 
 # ======================
-# 主布局
+# 布局
 # ======================
 col1, col2 = st.columns([1, 2])
 
 # ======================
-# 左侧输入（规整🔥）
+# 左侧输入
 # ======================
 with col1:
     st.subheader("Input Parameters")
 
     input_data = {}
 
-    # Row1
     c1, c2, c3 = st.columns(3)
     with c1: input_data['SOFA'] = st.number_input("SOFA (score)", 14.0)
     with c2: input_data['SAPSII'] = st.number_input("SAPSII (score)", 60.0)
     with c3: input_data['PLT'] = st.number_input("PLT (K/uL)", 80.0)
 
-    # Row2
     c1, c2, c3 = st.columns(3)
     with c1: input_data['RDW'] = st.number_input("RDW (%)", 18.0)
     with c2: input_data['RBC'] = st.number_input("RBC (m/uL)", 3.0)
     with c3: input_data['WBC'] = st.number_input("WBC (K/uL)", 18.0)
 
-    # Row3
     c1, c2, c3 = st.columns(3)
     with c1: input_data['Glu'] = st.number_input("Glucose (mg/dL)", 180.0)
     with c2: input_data['Na+'] = st.number_input("Na+ (mmol/L)", 130.0)
     with c3: input_data['AG'] = st.number_input("AG (mEq/L)", 20.0)
 
-    # Row4
     c1, c2, c3 = st.columns(3)
     with c1: input_data['CL-'] = st.number_input("Cl- (mmol/L)", 95.0)
     with c2: input_data['Mg2+'] = st.number_input("Mg2+ (mg/dL)", 2.5)
     with c3: input_data['Pco2'] = st.number_input("PCO2 (mmHg)", 55.0)
 
-    # Row5
     c1, c2, c3 = st.columns(3)
     with c1: input_data['Po2'] = st.number_input("PO2 (mmHg)", 60.0)
     with c2: input_data['PH'] = st.number_input("pH", 7.26)
     with c3: input_data['ALT'] = st.number_input("ALT (IU/L)", 120.0)
 
-    # Row6
     c1, c2, c3 = st.columns(3)
     with c1: input_data['Creatinine'] = st.number_input("Creatinine (mg/dL)", 2.5)
     with c2: input_data['BUN'] = st.number_input("BUN (mg/dL)", 40.0)
     with c3: input_data['Diuretic use'] = st.selectbox("Diuretic use", [0,1])
 
-    # Row7
     c1, c2, c3 = st.columns(3)
     with c1: input_data['Inotrope use'] = st.selectbox("Inotrope use", [0,1])
     with c2: input_data['Vasopressor use'] = st.selectbox("Vasopressor use", [0,1])
     with c3: st.write("")
-
-    st.markdown("<br>", unsafe_allow_html=True)
 
     calculate = st.button("🔍 Calculate Risk")
 
@@ -125,7 +127,6 @@ with col2:
         explainer = shap.TreeExplainer(model)
         shap_values = explainer.shap_values(input_df)
 
-        # Force plot
         st.subheader("Force Plot")
         shap.force_plot(
             explainer.expected_value,
@@ -137,7 +138,6 @@ with col2:
         st.pyplot(plt.gcf())
         plt.clf()
 
-        # Waterfall
         st.subheader("Waterfall Plot")
         shap.plots.waterfall(
             shap.Explanation(
@@ -150,7 +150,6 @@ with col2:
         st.pyplot(plt.gcf())
         plt.clf()
 
-        # 结果条
         st.markdown(f"""
         <div style='background-color:#f8d7da;padding:18px;border-radius:6px;margin-top:20px;font-size:18px;'>
         <b>Predicted risk of death: {prob*100:.2f}%</b>
